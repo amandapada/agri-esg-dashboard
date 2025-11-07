@@ -32,10 +32,21 @@ if biodiversity_col:
 else:
     st.error("Biodiversity Score column not found. Please check your CSV file.")
 
-# Bar chart: ESG Snapshot for 2025
+# Bar chart: ESG Snapshot for 2025 with custom labels
 st.subheader("2025 ESG Snapshot")
+custom_labels = {
+    "Carbon Emissions (tonnes CO2e)": "Carbon Emission",
+    "Water Usage (m3)": "Water Usage (L)",
+    "Waste Generated (kg)": "Waste Generated",
+    "Labour Hours (per hectare)": "Labour Hours (per kg)",
+    "Fertilizer Usage (kg/ha)": "Fertilizer Usage (kg)",
+    "Energy Consumption (kWh)": "Energy Consumption",
+    biodiversity_col: "Biodiversity Score"
+}
+
 if "2025" in df["Year"].values:
     latest = df[df["Year"] == "2025"].drop("Year", axis=1).T
+    latest = latest.rename(index=custom_labels)
     latest.columns = ["2025"]
     st.bar_chart(latest)
 else:
@@ -43,15 +54,7 @@ else:
 
 # Radar chart: 2025 ESG Profile
 st.subheader("2025 ESG Profile (Radar Chart)")
-metrics = [
-    "Carbon Emissions (tonnes CO2e)",
-    "Water Usage (m3)",
-    "Waste Generated (kg)",
-    "Labour Hours (per hectare)",
-    "Fertilizer Usage (kg/ha)",
-    "Energy Consumption (kWh)",
-    biodiversity_col
-]
+metrics = list(custom_labels.keys())
 
 if all(metric in df.columns for metric in metrics):
     values_2025 = df[df["Year"] == "2025"][metrics].values.flatten()
@@ -59,7 +62,7 @@ if all(metric in df.columns for metric in metrics):
     max_vals = df[metrics].max()
     normalized = (values_2025 - min_vals) / (max_vals - min_vals) * 100
 
-    labels = metrics
+    labels = [custom_labels[m] for m in metrics]
     num_vars = len(labels)
     angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist()
     normalized = np.concatenate((normalized, [normalized[0]]))
