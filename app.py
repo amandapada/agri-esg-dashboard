@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
 
 # Load ESG data
 df = pd.read_csv("esg_data.csv")
@@ -37,6 +39,43 @@ if 2025 in df["Year"].values:
     st.bar_chart(latest)
 else:
     st.error("No data found for year 2025.")
+
+# Radar chart: 2025 ESG Profile
+st.subheader("2025 ESG Profile (Radar Chart)")
+metrics = [
+    "Carbon Emissions (tonnes CO2e)",
+    "Water Usage (m3)",
+    "Waste Generated (kg)",
+    "Labour Hours (per hectare)",
+    "Fertilizer Usage (kg/ha)",
+    "Energy Consumption (kWh)",
+    biodiversity_col
+]
+
+if all(metric in df.columns for metric in metrics):
+    values_2025 = df[df["Year"] == 2025][metrics].values.flatten()
+    min_vals = df[metrics].min()
+    max_vals = df[metrics].max()
+    normalized = (values_2025 - min_vals) / (max_vals - min_vals) * 100
+
+    labels = metrics
+    num_vars = len(labels)
+    angles = np.linspace(0, 2 * np.pi, num_vars, endpoint=False).tolist()
+    normalized = np.concatenate((normalized, [normalized[0]]))
+    angles += angles[:1]
+
+    fig, ax = plt.subplots(figsize=(6, 6), subplot_kw=dict(polar=True))
+    ax.plot(angles, normalized, color='green', linewidth=2)
+    ax.fill(angles, normalized, color='green', alpha=0.25)
+    ax.set_theta_offset(np.pi / 2)
+    ax.set_theta_direction(-1)
+    ax.set_thetagrids(np.degrees(angles[:-1]), labels)
+    ax.set_title("2025 ESG Profile", fontsize=14)
+    ax.set_ylim(0, 100)
+
+    st.pyplot(fig)
+else:
+    st.error("One or more ESG metrics are missing from the CSV file.")
 
 # Insights
 st.subheader("Key Insights")
