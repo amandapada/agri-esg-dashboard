@@ -1,26 +1,38 @@
 import streamlit as st
 import pandas as pd
-import matplotlib.pyplot as plt
 
-st.title("ESG Dashboard for Agricultural SMEs")
+# Load ESG data
+df = pd.read_csv("esg_data.csv")
 
-# Sample ESG data
-data = {
-    "Metric": ["Carbon Emissions", "Water Usage", "Waste Generated", "Labour Hours"],
-    "Value": [120, 3500, 1200, 180],
-    "Regional Avg": [140, 3200, 1000, 200]
-}
-df = pd.DataFrame(data)
+st.set_page_config(page_title="ESG Dashboard", layout="wide")
+st.title("🌿 ESG Dashboard for Agricultural SMEs")
+st.markdown("This dashboard visualizes sustainability performance across key metrics from 2021 to 2025.")
 
-# Bar chart
-st.subheader("Current ESG Performance")
-st.bar_chart(df.set_index("Metric")["Value"])
+# Show raw data
+with st.expander("📄 View Raw ESG Data"):
+    st.dataframe(df)
 
-# Radar chart (placeholder)
-st.subheader("Comparison to Regional Averages")
-st.write("Radar chart coming soon...")
+# Line chart: Carbon Emissions
+st.subheader("📉 Carbon Emissions Over Time")
+st.line_chart(df.set_index("Year")["Carbon Emissions (tonnes CO2e)"])
 
-# Line chart
-st.subheader("Carbon Emissions Over Time")
-carbon_trend = pd.Series([160, 150, 135, 125, 120], index=[2021, 2022, 2023, 2024, 2025])
-st.line_chart(carbon_trend)
+# Line chart: Biodiversity Score
+st.subheader("🌱 Biodiversity Score Trend")
+st.line_chart(df.set_index("Year")["Biodiversity Score (0–100)"])
+
+# Bar chart: ESG Snapshot for 2025
+st.subheader("📊 ESG Snapshot for 2025")
+latest = df[df["Year"] == 2025].drop("Year", axis=1).T
+latest.columns = ["2025"]
+st.bar_chart(latest)
+
+# Insights
+st.subheader("🧠 Key Insights")
+st.markdown("- ✅ **Carbon emissions reduced by 27%** from 2021 to 2025.")
+st.markdown("- 🌿 **Biodiversity score improved from 58.2 to 77.5**, reflecting regenerative practices.")
+st.markdown("- ⚡ **Energy consumption dropped by 10%**, showing efficiency gains.")
+st.markdown("- 🧪 **Fertilizer usage decreased steadily**, supporting soil health and sustainability.")
+
+# Footer
+st.markdown("---")
+st.caption("Built with Streamlit • Data based on UK agricultural estimates • MVP for ESG innovation endorsement")
