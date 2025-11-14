@@ -1,10 +1,3 @@
-Got you — here is the **FULL, clean, investor-ready README.md exactly as you should paste it into GitHub**.
-
-No placeholders. No missing parts.
-Just copy–paste this **entire block** into your `README.md` file.
-
----
-
 # 🌱 AgriESG — AI-Driven ESG Scoring for Farmers & Agribusinesses
 
 AgriESG is a sustainability intelligence platform that enables farmers, cooperatives, and agribusiness organisations to measure, understand, and improve their Environmental, Social, and Governance (ESG) performance.
