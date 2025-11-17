@@ -19,7 +19,6 @@ from PIL import Image
 # PAGE CONFIG (logo as page icon)
 # ------------------------------------------------------------
 
-# This will raise an error if the icon is missing, which helps debugging.
 icon_img = Image.open("agriesg_icon.png")
 
 st.set_page_config(
@@ -116,10 +115,11 @@ st.markdown(
 
     /* Ensure alert text (info / warning / error) is readable */
     div[data-testid="stAlert"] {
-        color: #111827 !important;
+        background-color: #fef9c3 !important;  /* pale yellow */
+        border: 1px solid #facc15 !important;
     }
-    div[data-testid="stAlert"] .markdown-text p {
-        color: #111827 !important;
+    div[data-testid="stAlert"] * {
+        color: #111827 !important;  /* force dark text for everything inside */
     }
     </style>
     """,
@@ -153,7 +153,6 @@ alt.themes.enable("agriesg_light")
 with open("agriesg_icon.png", "rb") as f:
     encoded_logo = base64.b64encode(f.read()).decode()
 
-# Single, clean header
 header_col1, header_col2 = st.columns([1, 6])
 with header_col1:
     st.image(icon_img, width=78)
@@ -173,7 +172,6 @@ with header_col2:
 
 st.markdown("---")
 
-# Sidebar branding (small logo + title)
 st.sidebar.markdown(
     f"""
     <div style="text-align:center;">
@@ -202,10 +200,6 @@ EF_ELEC = 0.5    # kg CO2e per kWh electricity
 # ESG SCORING ENGINE — HYBRID (THRESHOLD + WEIGHTED)
 # ------------------------------------------------------------
 def score_from_thresholds(value, thresholds):
-    """
-    thresholds = (excellent, good, moderate, high)
-    returns score 100..0
-    """
     exc, good, mod, high = thresholds
     if pd.isna(value):
         return np.nan
@@ -221,12 +215,6 @@ def score_from_thresholds(value, thresholds):
 
 
 def compute_esg_scores(row):
-    """
-    Returns env_score, soc_score, gov_score, overall
-    using Balanced UK Standard + Weighted Model.
-    """
-
-    # ---------- ENVIRONMENT ----------
     env_subscores = []
 
     env_subscores.append(
@@ -247,7 +235,6 @@ def compute_esg_scores(row):
 
     env_score = np.nanmean(env_subscores)
 
-    # ---------- SOCIAL ----------
     female_pct = row["female_share"] * 100 if pd.notna(row["female_share"]) else 0
     acc_rate = row["accidents_per_100_workers"]
 
@@ -279,19 +266,17 @@ def compute_esg_scores(row):
         [social_score_female(female_pct), social_score_acc(acc_rate)]
     )
 
-    # ---------- GOVERNANCE ----------
     cert = str(row.get("certification_scheme", "None")).lower()
 
     if "organic" in cert or "leaf" in cert:
         gov_score = 100
-    elif "red" in cert:  # Red Tractor
+    elif "red" in cert:
         gov_score = 80
     elif cert != "none":
         gov_score = 60
     else:
         gov_score = 40
 
-    # ---------- OVERALL ----------
     overall = 0.5 * env_score + 0.3 * soc_score + 0.2 * gov_score
 
     return env_score, soc_score, gov_score, overall
@@ -332,7 +317,6 @@ def score_color(score):
 def compute_kpis(df: pd.DataFrame) -> pd.DataFrame:
     df = df.copy()
 
-    # avoid divide-by-zero
     df["area_ha"] = df["area_ha"].replace(0, np.nan)
     df["yield_tonnes"] = df["yield_tonnes"].replace(0, np.nan)
     df["workers_total"] = df["workers_total"].replace(0, np.nan)
@@ -357,7 +341,6 @@ def compute_kpis(df: pd.DataFrame) -> pd.DataFrame:
         df["accidents_count"] / df["workers_total"] * 100
     )
 
-    # Ensure optional columns exist
     if "detail_level" not in df.columns:
         df["detail_level"] = "farm"
     if "enterprise_type" not in df.columns:
@@ -366,7 +349,6 @@ def compute_kpis(df: pd.DataFrame) -> pd.DataFrame:
     df["detail_level"] = df["detail_level"].fillna("farm").str.lower()
     df["enterprise_type"] = df["enterprise_type"].fillna("")
 
-    # ESG scores per record
     env_scores, soc_scores, gov_scores, esg_scores = [], [], [], []
     for _, r in df.iterrows():
         e, s, g, o = compute_esg_scores(r)
@@ -380,7 +362,6 @@ def compute_kpis(df: pd.DataFrame) -> pd.DataFrame:
     df["gov_score"] = gov_scores
     df["esg_score"] = esg_scores
 
-    # Build a friendly label based on detail level
     def build_label(r):
         dl = str(r["detail_level"]).lower()
         ent = str(r["enterprise_type"]).strip()
@@ -390,7 +371,7 @@ def compute_kpis(df: pd.DataFrame) -> pd.DataFrame:
             main = ent if ent else "Whole farm"
         elif dl == "enterprise":
             main = ent if ent else crop
-        else:  # "crop" or anything else
+        else:
             if ent and crop:
                 main = f"{crop} ({ent})"
             else:
@@ -472,10 +453,8 @@ def narrative_to_pdf_bytes(title: str, narrative_md: str) -> bytes:
     """
 
     def to_latin1(s: str) -> str:
-        # Replace characters outside latin-1 so FPDF doesn't crash
         return s.encode("latin-1", "replace").decode("latin-1")
 
-    # Remove basic markdown syntax
     text = (
         narrative_md.replace("###", "")
         .replace("####", "")
@@ -483,7 +462,6 @@ def narrative_to_pdf_bytes(title: str, narrative_md: str) -> bytes:
         .replace("*", "")
     )
 
-    # Normalise both title and body to latin-1-safe text
     text = to_latin1(text)
     title = to_latin1(title)
 
@@ -496,7 +474,9 @@ def narrative_to_pdf_bytes(title: str, narrative_md: str) -> bytes:
     pdf.set_font("Arial", "", 11)
     pdf.multi_cell(0, 6, text)
 
-    pdf_bytes = pdf.output(dest="S").encode("latin-1")
+    pdf_bytes = pdf.output(dest="S")
+    if isinstance(pdf_bytes, str):
+        pdf_bytes = pdf_bytes.encode("latin-1", "ignore")
     return pdf_bytes
 
 
@@ -583,7 +563,6 @@ privacy_mode = st.sidebar.checkbox(
 if mode == "📊 Multi-Farm Overview":
     st.subheader("📊 Multi-Farm ESG Overview")
 
-    # Aggregate KPIs
     total_area = df["area_ha"].sum()
     total_yield = df["yield_tonnes"].sum()
     total_emissions = df["total_emissions"].sum()
@@ -600,7 +579,6 @@ if mode == "📊 Multi-Farm Overview":
     with c4:
         kpi_card("Average ESG score", avg_esg, "", 0)
 
-    # ---------- ESG SCORE DISTRIBUTION ----------
     st.markdown("#### ESG score distribution")
 
     df["esg_band"] = pd.cut(
@@ -645,7 +623,6 @@ if mode == "📊 Multi-Farm Overview":
 
     st.altair_chart(score_chart, use_container_width=True)
 
-    # ---------- AVERAGE ESG COMPONENTS ----------
     st.markdown("#### Average ESG component scores")
 
     comp_df = pd.DataFrame(
@@ -673,7 +650,6 @@ if mode == "📊 Multi-Farm Overview":
 
     st.altair_chart(comp_chart, use_container_width=True)
 
-    # ---------- FULL DATA ----------
     st.markdown("#### Full dataset (one row per farm / enterprise / crop)")
     st.dataframe(df, use_container_width=True)
 
@@ -692,7 +668,6 @@ else:
 
     st.markdown(f"#### {record_label}")
 
-    # ---------- KPI CARDS ----------
     st.markdown("##### Key performance indicators")
 
     c1, c2, c3, c4 = st.columns(4)
@@ -730,7 +705,6 @@ else:
             1,
         )
 
-    # ---------- ESG SCORECARDS ----------
     st.markdown("##### ESG scores")
 
     c1, c2, c3, c4 = st.columns(4)
@@ -755,7 +729,6 @@ else:
             unsafe_allow_html=True,
         )
 
-    # ---------- EMISSIONS DONUT ----------
     st.markdown("##### Emissions breakdown")
 
     emis_df = pd.DataFrame(
@@ -784,7 +757,6 @@ else:
     )
     st.altair_chart(donut, use_container_width=True)
 
-    # ---------- PEER COMPARISON (ANONYMOUS) ----------
     st.markdown("##### Peer comparison (anonymous)")
 
     if privacy_mode:
@@ -821,7 +793,6 @@ else:
 
         st.altair_chart(scatter, use_container_width=True)
 
-    # ---------- ESG NARRATIVE + PDF DOWNLOAD ----------
     st.markdown("##### ESG narrative report")
 
     peer_avg = {
