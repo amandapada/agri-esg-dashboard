@@ -3,7 +3,6 @@
 # Hybrid ESG Scoring (Threshold + Weighted, Balanced UK Standard)
 # Privacy Mode + Anonymous Benchmarking + PDF Export
 # Supports Simple (farm), Standard (enterprise), Advanced (crop) modes
-# With full AgriESG branding (logo in tab, header, sidebar)
 # ================================================================
 
 import base64
@@ -28,7 +27,7 @@ st.set_page_config(
 )
 
 # ------------------------------------------------------------
-# GLOBAL STYLING (Tenorite + white UI + clear uploader)
+# GLOBAL STYLING (Tenorite + white UI + clear uploader + readable alerts)
 # ------------------------------------------------------------
 st.markdown(
     """
@@ -113,13 +112,13 @@ st.markdown(
         border: none !important;
     }
 
-    /* Ensure alert text (info / warning / error) is readable */
+    /* Alerts (info / warning / error): readable text & soft yellow bg */
     div[data-testid="stAlert"] {
         background-color: #fef9c3 !important;  /* pale yellow */
         border: 1px solid #facc15 !important;
     }
     div[data-testid="stAlert"] * {
-        color: #111827 !important;  /* force dark text for everything inside */
+        color: #111827 !important;            /* force dark text for everything */
     }
     </style>
     """,
@@ -215,8 +214,8 @@ def score_from_thresholds(value, thresholds):
 
 
 def compute_esg_scores(row):
+    # ---------- ENVIRONMENT ----------
     env_subscores = []
-
     env_subscores.append(
         score_from_thresholds(row["emissions_per_tonne"], (300, 450, 600, 800))
     )
@@ -235,6 +234,7 @@ def compute_esg_scores(row):
 
     env_score = np.nanmean(env_subscores)
 
+    # ---------- SOCIAL ----------
     female_pct = row["female_share"] * 100 if pd.notna(row["female_share"]) else 0
     acc_rate = row["accidents_per_100_workers"]
 
@@ -266,6 +266,7 @@ def compute_esg_scores(row):
         [social_score_female(female_pct), social_score_acc(acc_rate)]
     )
 
+    # ---------- GOVERNANCE ----------
     cert = str(row.get("certification_scheme", "None")).lower()
 
     if "organic" in cert or "leaf" in cert:
@@ -277,6 +278,7 @@ def compute_esg_scores(row):
     else:
         gov_score = 40
 
+    # ---------- OVERALL ----------
     overall = 0.5 * env_score + 0.3 * soc_score + 0.2 * gov_score
 
     return env_score, soc_score, gov_score, overall
@@ -443,18 +445,19 @@ Peer average female share is around **{peer_avg['female']*100:.0f}%**.
 
 
 # ------------------------------------------------------------
-# SIMPLE PDF GENERATOR FOR ESG NARRATIVE (UNICODE-SAFE)
+# SIMPLE PDF GENERATOR FOR ESG NARRATIVE (UNICODE-SAFE, BYTES)
 # ------------------------------------------------------------
 def narrative_to_pdf_bytes(title: str, narrative_md: str) -> bytes:
     """
-    Very simple A4 PDF with the narrative text.
-    Converts markdown headings to plain text and strips /
-    replaces characters that FPDF (latin-1) cannot handle.
+    Create a simple A4 PDF and return it as raw bytes.
+    Handles unicode by converting to latin-1 and replacing unsupported chars.
     """
 
     def to_latin1(s: str) -> str:
+        # Replace characters outside latin-1 so FPDF doesn't crash
         return s.encode("latin-1", "replace").decode("latin-1")
 
+    # Strip basic markdown
     text = (
         narrative_md.replace("###", "")
         .replace("####", "")
@@ -462,22 +465,26 @@ def narrative_to_pdf_bytes(title: str, narrative_md: str) -> bytes:
         .replace("*", "")
     )
 
-    text = to_latin1(text)
-    title = to_latin1(title)
+    title_l1 = to_latin1(title)
+    text_l1 = to_latin1(text)
 
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
     pdf.add_page()
     pdf.set_font("Arial", "B", 14)
-    pdf.multi_cell(0, 8, title)
+    pdf.multi_cell(0, 8, title_l1)
     pdf.ln(4)
     pdf.set_font("Arial", "", 11)
-    pdf.multi_cell(0, 6, text)
+    pdf.multi_cell(0, 6, text_l1)
 
-    pdf_bytes = pdf.output(dest="S")
-    if isinstance(pdf_bytes, str):
-        pdf_bytes = pdf_bytes.encode("latin-1", "ignore")
-    return pdf_bytes
+    # dest="S" returns the whole document as bytes or str depending on FPDF version
+    pdf_out = pdf.output(dest="S")
+
+    # Normalise to bytes for Streamlit
+    if isinstance(pdf_out, bytes):
+        return pdf_out
+    else:  # str
+        return pdf_out.encode("latin-1", "ignore")
 
 
 # ------------------------------------------------------------
