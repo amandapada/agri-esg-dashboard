@@ -1,73 +1,35 @@
 # ================================================================
-# 🌱 AGRIESG PLATFORM — MULTI-FARM + FARM-LEVEL DASHBOARD (MVP)
+# 🌱 AGRIESG PLATFORM — MULTI-FARM & FARM/ENTERPRISE/CROP DASHBOARD
 # Hybrid ESG Scoring (Threshold + Weighted, Balanced UK Standard)
-# With Privacy Mode + Anonymous Benchmarking + PDF Export
-# Supports multiple crops per farm (farm-crop-year records)
+# Privacy Mode + Anonymous Benchmarking + PDF Export
+# Supports Simple (farm), Standard (enterprise), Advanced (crop) modes
+# With full AgriESG branding (logo in tab, header, sidebar)
 # ================================================================
+
+import base64
+from io import BytesIO
 
 import streamlit as st
 import pandas as pd
 import numpy as np
 import altair as alt
 from fpdf import FPDF
-from io import BytesIO
-
-# ------------------------------------------------------------
-# PAGE CONFIG
-# ------------------------------------------------------------
-import base64
 from PIL import Image
 
-# --------------------------
-# Load logo
-# --------------------------
-logo_path = "agriesg_icon.png"
-logo = Image.open(logo_path)
+# ------------------------------------------------------------
+# PAGE CONFIG (use your logo as page icon)
+# ------------------------------------------------------------
+try:
+    ICON_PATH = "agriesg_icon.png"
+    icon_img = Image.open(ICON_PATH)
+except Exception:
+    ICON_PATH = None
+    icon_img = "🌱"  # fallback emoji
 
-# Convert logo to base64 (for centered banner)
-with open(logo_path, "rb") as f:
-    encoded_logo = base64.b64encode(f.read()).decode()
-
-st.markdown(f"""
-<div style="text-align:center; padding-top:10px; padding-bottom:5px;">
-    <img src="data:image/png;base64,{encoded_logo}" width="110">
-    <h2 style="margin-bottom:0; margin-top:0.5rem;">AgriESG Platform</h2>
-    <p style="font-size:15px; color:#6b7280; margin-top:-4px;">
-        Simple. Transparent. Farmer-friendly ESG insights.
-    </p>
-</div>
-<hr style="margin-top:0.5rem; margin-bottom:1.2rem;">
-""", unsafe_allow_html=True)
-
-col1, col2 = st.columns([1, 6])
-
-with col1:
-    st.image(logo, width=70)
-
-with col2:
-    st.markdown("""
-        <h1 style="margin-bottom:0; margin-top:0.5rem;">
-            🌱 Farm-Level ESG Dashboard
-        </h1>
-        <p style="font-size:1rem; color:#4b5563; margin-top:-6px;">
-            Analyse emissions, water use, social indicators & governance at any data detail level.
-        </p>
-    """, unsafe_allow_html=True)
-
-st.sidebar.markdown(
-    f"""
-    <div style="text-align:center;">
-        <img src="data:image/png;base64,{encoded_logo}" width="90" style="margin-bottom:5px;">
-        <p style="font-size:14px; color:#374151; margin-bottom:0;">
-            <strong>AgriESG Dashboard</strong>
-        </p>
-        <p style="font-size:12px; color:#6b7280; margin-top:-6px;">
-            v1.0 — Beta
-        </p>
-        <hr>
-    </div>
-    """,
-    unsafe_allow_html=True
+st.set_page_config(
+    page_title="AgriESG Platform",
+    page_icon=icon_img,
+    layout="wide",
 )
 
 # ------------------------------------------------------------
@@ -82,7 +44,7 @@ st.markdown(
         font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
     .block-container {
-        padding-top: 1rem;
+        padding-top: 0.5rem;
         padding-bottom: 3rem;
     }
 
@@ -171,7 +133,81 @@ alt.themes.register(
 alt.themes.enable("agriesg_light")
 
 # ------------------------------------------------------------
-# BASIC CONSTANTS
+# BRANDING: LOAD LOGO AND PREP BASE64
+# ------------------------------------------------------------
+encoded_logo = None
+if ICON_PATH is not None:
+    try:
+        with open(ICON_PATH, "rb") as f:
+            encoded_logo = base64.b64encode(f.read()).decode()
+    except Exception:
+        encoded_logo = None
+
+# ------------------------------------------------------------
+# TOP BRAND BANNER + MAIN HEADER
+# ------------------------------------------------------------
+if encoded_logo:
+    st.markdown(
+        f"""
+        <div style="text-align:center; padding-top:6px; padding-bottom:4px;">
+            <img src="data:image/png;base64,{encoded_logo}" width="110">
+            <h2 style="margin-bottom:0; margin-top:0.5rem;">AgriESG Platform</h2>
+            <p style="font-size:15px; color:#6b7280; margin-top:-4px;">
+                Simple, transparent ESG insights for farms and agri-businesses
+            </p>
+        </div>
+        <hr style="margin-top:0.5rem; margin-bottom:1.0rem;">
+        """,
+        unsafe_allow_html=True,
+    )
+else:
+    st.markdown("## AgriESG Platform")
+    st.markdown("---")
+
+# main header row (logo + title/description)
+col_h1, col_h2 = st.columns([1, 6])
+with col_h1:
+    if icon_img is not None:
+        try:
+            st.image(icon_img, width=70)
+        except Exception:
+            pass
+with col_h2:
+    st.markdown(
+        """
+        <h1 style="margin-bottom:0; margin-top:0.5rem;">
+            🌱 ESG Dashboard — Farms, Enterprises & Crops
+        </h1>
+        <p style="font-size:1rem; color:#4b5563; margin-top:-6px;">
+            Analyse emissions, water, social indicators and governance at the level of detail you have:
+            whole-farm, enterprises or individual crops.
+        </p>
+        """,
+        unsafe_allow_html=True,
+    )
+
+# Sidebar branding
+if encoded_logo:
+    st.sidebar.markdown(
+        f"""
+        <div style="text-align:center;">
+            <img src="data:image/png;base64,{encoded_logo}" width="90" style="margin-bottom:5px;">
+            <p style="font-size:14px; color:#374151; margin-bottom:0;">
+                <strong>AgriESG Dashboard</strong>
+            </p>
+            <p style="font-size:12px; color:#6b7280; margin-top:-6px;">
+                v1.0 — Beta
+            </p>
+            <hr>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+else:
+    st.sidebar.markdown("### AgriESG Dashboard\n---")
+
+# ------------------------------------------------------------
+# CONSTANTS
 # ------------------------------------------------------------
 EF_N = 5.5       # kg CO2e per kg N fertiliser
 EF_DIESEL = 2.7  # kg CO2e per litre diesel
@@ -337,7 +373,16 @@ def compute_kpis(df: pd.DataFrame) -> pd.DataFrame:
         df["accidents_count"] / df["workers_total"] * 100
     )
 
-    # ESG scores per farm-crop-year record
+    # Ensure optional columns exist
+    if "detail_level" not in df.columns:
+        df["detail_level"] = "farm"
+    if "enterprise_type" not in df.columns:
+        df["enterprise_type"] = ""
+
+    df["detail_level"] = df["detail_level"].fillna("farm").str.lower()
+    df["enterprise_type"] = df["enterprise_type"].fillna("")
+
+    # ESG scores per record
     env_scores, soc_scores, gov_scores, esg_scores = [], [], [], []
     for _, r in df.iterrows():
         e, s, g, o = compute_esg_scores(r)
@@ -351,17 +396,25 @@ def compute_kpis(df: pd.DataFrame) -> pd.DataFrame:
     df["gov_score"] = gov_scores
     df["esg_score"] = esg_scores
 
-    # Label that supports multiple crops per farm
-    df["record_label"] = (
-        df["organisation_name"]
-        + " — "
-        + df["crop"].astype(str)
-        + " ("
-        + df["country"].astype(str)
-        + " "
-        + df["year"].astype(str)
-        + ")"
-    )
+    # Build a friendly label based on detail level
+    def build_label(r):
+        dl = str(r["detail_level"]).lower()
+        ent = str(r["enterprise_type"]).strip()
+        crop = str(r["crop"]).strip()
+
+        if dl == "farm":
+            main = ent if ent else "Whole farm"
+        elif dl == "enterprise":
+            main = ent if ent else crop
+        else:  # "crop" or anything else
+            if ent and crop:
+                main = f"{crop} ({ent})"
+            else:
+                main = crop or ent or "Record"
+
+        return f"{r['organisation_name']} — {main} ({r['country']} {int(r['year'])})"
+
+    df["record_label"] = df.apply(build_label, axis=1)
 
     return df
 
@@ -375,12 +428,12 @@ def generate_esg_narrative(row: pd.Series, peer_avg: dict) -> str:
     return f"""
 ### 🌱 ESG Narrative — {row['organisation_name']} ({row['farm_id']})
 
-**Location & Enterprise**
+**Location & enterprise**
 
 - Country: **{row['country']}**
-- Crop: **{row['crop']}**
+- Enterprise / crop: **{row['enterprise_type'] or row['crop']}**
 - Reporting year: **{int(row['year'])}**
-- Farmed area: **{row['area_ha']:.1f} ha**
+- Farmed area for this record: **{row['area_ha']:.1f} ha**
 - Production: **{row['yield_tonnes']:.1f} tonnes**
 
 ---
@@ -411,7 +464,7 @@ Peer average female share is around **{peer_avg['female']*100:.0f}%**.
 
 ---
 
-#### ⭐ ESG Scores
+#### ⭐ ESG scores
 
 - Environment score: **{row['env_score']:.0f} / 100**
 - Social score: **{row['soc_score']:.0f} / 100**
@@ -453,14 +506,30 @@ def narrative_to_pdf_bytes(title: str, narrative_md: str) -> bytes:
 
 
 # ------------------------------------------------------------
-# LAYOUT — TITLE + FILE UPLOAD
+# INFO + HOW-TO
 # ------------------------------------------------------------
-st.title("🌱 AgriESG Platform — Multi-Farm & Farm-Level Dashboard")
 st.info(
     "🔐 **Your data is private.** No competitor information is ever shown — "
     "benchmarking uses anonymous peer averages only."
 )
 
+with st.expander("How to use AgriESG with different data levels"):
+    st.markdown(
+        """
+- **Simple mode – Whole farm**  
+  One row per farm. Use `detail_level = farm`, `enterprise_type = Whole farm`, `crop = Mixed`.
+- **Standard mode – Main enterprises**  
+  One row per enterprise (e.g. Arable, Dairy). Use `detail_level = enterprise`.
+- **Advanced mode – Per crop**  
+  One row per crop/rotation. Use `detail_level = crop`.
+
+If you’re unsure, start with **Simple mode (Whole farm)** — your ESG scores will still be useful.
+"""
+    )
+
+# ------------------------------------------------------------
+# FILE UPLOAD
+# ------------------------------------------------------------
 uploaded = st.file_uploader("Upload your AgriESG CSV file", type=["csv"])
 
 if uploaded is None:
@@ -490,6 +559,14 @@ if missing:
     st.error("❌ Missing required columns: " + ", ".join(missing))
     st.stop()
 
+optional_cols = ["detail_level", "enterprise_type", "certification_scheme"]
+missing_opt = [c for c in optional_cols if c not in df_raw.columns]
+if missing_opt:
+    st.warning(
+        "Optional columns not found (using simple farm-level mode): "
+        + ", ".join(missing_opt)
+    )
+
 df = compute_kpis(df_raw)
 
 # ------------------------------------------------------------
@@ -497,7 +574,7 @@ df = compute_kpis(df_raw)
 # ------------------------------------------------------------
 mode = st.sidebar.radio(
     "Dashboard mode",
-    ["📊 Multi-Farm Overview", "🌱 Farm-Level Analysis"],
+    ["📊 Multi-Farm Overview", "🌱 Farm / Enterprise / Crop Analysis"],
 )
 privacy_mode = st.sidebar.checkbox(
     "Privacy Mode (hide peer benchmarking)",
@@ -558,6 +635,7 @@ if mode == "📊 Multi-Farm Overview":
             ),
             tooltip=[
                 "farm_id",
+                "enterprise_type",
                 "crop",
                 alt.Tooltip("year:Q", title="Year", format=".0f"),
                 alt.Tooltip("esg_score:Q", title="ESG score", format=".0f"),
@@ -601,19 +679,19 @@ if mode == "📊 Multi-Farm Overview":
     st.altair_chart(comp_chart, use_container_width=True)
 
     # ---------- FULL DATA ----------
-    st.markdown("### Full dataset (one row per farm–crop–year)")
+    st.markdown("### Full dataset (one row per farm / enterprise / crop)")
     st.dataframe(df, use_container_width=True)
 
 # ------------------------------------------------------------
-# FARM-LEVEL ANALYSIS
+# FARM / ENTERPRISE / CROP ANALYSIS
 # ------------------------------------------------------------
 else:
-    st.header("🌱 Farm-Level ESG Analysis")
+    st.header("🌱 Farm / Enterprise / Crop ESG Analysis")
 
-    # Support multiple crops per farm: select by record label
     record_label = st.sidebar.selectbox(
-        "Select a farm & crop",
+        "Select a record",
         df["record_label"].unique(),
+        help="Each row may represent a whole farm, an enterprise (e.g. Arable), or a specific crop.",
     )
     row = df[df["record_label"] == record_label].iloc[0]
 
@@ -646,7 +724,7 @@ else:
     with c5:
         kpi_card("Total emissions", row["total_emissions"], " kg CO₂e", 0)
     with c6:
-        kpi_card("Farm area", row["area_ha"], " ha", 1)
+        kpi_card("Area (this record)", row["area_ha"], " ha", 1)
     with c7:
         kpi_card("Workers", row["workers_total"], "", 0)
     with c8:
@@ -763,14 +841,13 @@ else:
     with st.expander("Open ESG narrative"):
         st.markdown(narrative)
 
-    # PDF download button
     pdf_bytes = narrative_to_pdf_bytes(
-        title=f"ESG report — {row['organisation_name']} ({row['crop']} {int(row['year'])})",
+        title=f"ESG report — {row['organisation_name']} ({row['enterprise_type'] or row['crop']} {int(row['year'])})",
         narrative_md=narrative,
     )
     st.download_button(
         label="📄 Download ESG report as PDF",
         data=pdf_bytes,
-        file_name=f"ESG_report_{row['farm_id']}_{row['crop']}_{int(row['year'])}.pdf",
+        file_name=f"ESG_report_{row['farm_id']}_{row['enterprise_type'] or row['crop']}_{int(row['year'])}.pdf",
         mime="application/pdf",
     )
