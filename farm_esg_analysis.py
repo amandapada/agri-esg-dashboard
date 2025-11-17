@@ -113,6 +113,14 @@ st.markdown(
         font-weight: 500 !important;
         border: none !important;
     }
+
+    /* Ensure alert text (info / warning / error) is readable */
+    div[data-testid="stAlert"] {
+        color: #111827 !important;
+    }
+    div[data-testid="stAlert"] .markdown-text p {
+        color: #111827 !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -454,19 +462,30 @@ Peer average female share is around **{peer_avg['female']*100:.0f}%**.
 
 
 # ------------------------------------------------------------
-# SIMPLE PDF GENERATOR FOR ESG NARRATIVE
+# SIMPLE PDF GENERATOR FOR ESG NARRATIVE (UNICODE-SAFE)
 # ------------------------------------------------------------
 def narrative_to_pdf_bytes(title: str, narrative_md: str) -> bytes:
     """
     Very simple A4 PDF with the narrative text.
-    Converts markdown headings to plain text.
+    Converts markdown headings to plain text and strips /
+    replaces characters that FPDF (latin-1) cannot handle.
     """
+
+    def to_latin1(s: str) -> str:
+        # Replace characters outside latin-1 so FPDF doesn't crash
+        return s.encode("latin-1", "replace").decode("latin-1")
+
+    # Remove basic markdown syntax
     text = (
         narrative_md.replace("###", "")
         .replace("####", "")
         .replace("**", "")
         .replace("*", "")
     )
+
+    # Normalise both title and body to latin-1-safe text
+    text = to_latin1(text)
+    title = to_latin1(title)
 
     pdf = FPDF()
     pdf.set_auto_page_break(auto=True, margin=15)
