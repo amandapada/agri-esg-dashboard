@@ -1,13 +1,16 @@
 # ================================================================
 # 🌱 AGRIESG PLATFORM — MULTI-FARM + FARM-LEVEL DASHBOARD (MVP)
 # Hybrid ESG Scoring (Threshold + Weighted, Balanced UK Standard)
-# With Privacy Mode + Anonymous Benchmarking
+# With Privacy Mode + Anonymous Benchmarking + PDF Export
+# Supports multiple crops per farm (farm-crop-year records)
 # ================================================================
 
 import streamlit as st
 import pandas as pd
 import numpy as np
 import altair as alt
+from fpdf import FPDF
+from io import BytesIO
 
 # ------------------------------------------------------------
 # PAGE CONFIG
@@ -19,7 +22,7 @@ st.set_page_config(
 )
 
 # ------------------------------------------------------------
-# GLOBAL STYLING (WHITE UI + UPLOADER BUTTON)
+# GLOBAL STYLING (WHITE UI + CLEAR UPLOADER)
 # ------------------------------------------------------------
 st.markdown(
     """
@@ -65,16 +68,26 @@ st.markdown(
         margin-bottom: 10px;
     }
     .score-green { background-color: #22c55e; }
-    .score-amber { background-color: #facc15; color: #1f2933 !important; }
+    .score-amber { background-color: #facc15; color: #1f2937 !important; }
     .score-orange { background-color: #fb923c; }
     .score-red { background-color: #ef4444; }
 
-    /* Make file uploader lighter & button visible */
+    /* File uploader: lighter background + dark text + visible button */
     div[data-testid="stFileUploader"] > label div[data-testid="stFileUploaderDropzone"] {
-        background-color: #f9fafb;
+        background-color: #f3f4f6;
         border: 1px dashed #d1d5db;
         color: #111827;
     }
+    /* Uploaded filename row */
+    div[data-testid="stFileUploader"] div[role="list"] div {
+        background-color: #f9fafb;
+        border-radius: 0.5rem;
+        padding: 0.25rem 0.75rem;
+    }
+    div[data-testid="stFileUploader"] div[role="list"] span {
+        color: #111827 !important;
+    }
+    /* Browse files button */
     div[data-testid="stFileUploader"] button[kind="secondary"] {
         background-color: #2563eb !important;
         color: #ffffff !important;
@@ -275,7 +288,7 @@ def compute_kpis(df: pd.DataFrame) -> pd.DataFrame:
         df["accidents_count"] / df["workers_total"] * 100
     )
 
-    # ESG scores per farm
+    # ESG scores per farm-crop-year record
     env_scores, soc_scores, gov_scores, esg_scores = [], [], [], []
     for _, r in df.iterrows():
         e, s, g, o = compute_esg_scores(r)
@@ -288,6 +301,18 @@ def compute_kpis(df: pd.DataFrame) -> pd.DataFrame:
     df["soc_score"] = soc_scores
     df["gov_score"] = gov_scores
     df["esg_score"] = esg_scores
+
+    # Label that supports multiple crops per farm
+    df["record_label"] = (
+        df["organisation_name"]
+        + " — "
+        + df["crop"].astype(str)
+        + " ("
+        + df["country"].astype(str)
+        + " "
+        + df["year"].astype(str)
+        + ")"
+    )
 
     return df
 
@@ -348,6 +373,34 @@ Peer average female share is around **{peer_avg['female']*100:.0f}%**.
 
 🔐 *Peer benchmarks are anonymised. No other farm's identity or individual data is shown.*
 """
+
+
+# ------------------------------------------------------------
+# SIMPLE PDF GENERATOR FOR ESG NARRATIVE
+# ------------------------------------------------------------
+def narrative_to_pdf_bytes(title: str, narrative_md: str) -> bytes:
+    """
+    Very simple A4 PDF with the narrative text.
+    Converts markdown headings to plain text.
+    """
+    text = (
+        narrative_md.replace("###", "")
+        .replace("####", "")
+        .replace("**", "")
+        .replace("*", "")
+    )
+
+    pdf = FPDF()
+    pdf.set_auto_page_break(auto=True, margin=15)
+    pdf.add_page()
+    pdf.set_font("Arial", "B", 14)
+    pdf.multi_cell(0, 8, title)
+    pdf.ln(4)
+    pdf.set_font("Arial", "", 11)
+    pdf.multi_cell(0, 6, text)
+
+    pdf_bytes = pdf.output(dest="S").encode("latin-1")
+    return pdf_bytes
 
 
 # ------------------------------------------------------------
@@ -415,7 +468,7 @@ if mode == "📊 Multi-Farm Overview":
     total_emissions = df["total_emissions"].sum()
     avg_esg = df["esg_score"].mean()
 
-    st.subheader("Key Aggregated Metrics")
+    st.subheader("Key aggregated metrics")
     c1, c2, c3, c4 = st.columns(4)
     with c1:
         kpi_card("Total area", total_area, " ha", 1)
@@ -427,9 +480,8 @@ if mode == "📊 Multi-Farm Overview":
         kpi_card("Average ESG score", avg_esg, "", 0)
 
     # ---------- ESG SCORE DISTRIBUTION ----------
-    st.markdown("### ESG Score Distribution")
+    st.markdown("### ESG score distribution")
 
-    # Create ESG bands for colour-coding
     df["esg_band"] = pd.cut(
         df["esg_score"],
         bins=[-0.1, 40, 60, 80, 100.1],
@@ -440,7 +492,7 @@ if mode == "📊 Multi-Farm Overview":
         alt.Chart(df)
         .mark_circle(size=80)
         .encode(
-            x=alt.X("farm_id:N", title="Farm"),
+            x=alt.X("farm_id:N", title="Farm ID"),
             y=alt.Y("esg_score:Q", title="ESG score"),
             color=alt.Color(
                 "esg_band:N",
@@ -457,6 +509,8 @@ if mode == "📊 Multi-Farm Overview":
             ),
             tooltip=[
                 "farm_id",
+                "crop",
+                alt.Tooltip("year:Q", title="Year", format=".0f"),
                 alt.Tooltip("esg_score:Q", title="ESG score", format=".0f"),
                 alt.Tooltip("env_score:Q", title="Environment", format=".0f"),
                 alt.Tooltip("soc_score:Q", title="Social", format=".0f"),
@@ -470,7 +524,7 @@ if mode == "📊 Multi-Farm Overview":
     st.altair_chart(score_chart, use_container_width=True)
 
     # ---------- AVERAGE ESG COMPONENTS ----------
-    st.markdown("### Average ESG Component Scores")
+    st.markdown("### Average ESG component scores")
 
     comp_df = pd.DataFrame(
         {
@@ -498,7 +552,7 @@ if mode == "📊 Multi-Farm Overview":
     st.altair_chart(comp_chart, use_container_width=True)
 
     # ---------- FULL DATA ----------
-    st.markdown("### Full Farm Dataset")
+    st.markdown("### Full dataset (one row per farm–crop–year)")
     st.dataframe(df, use_container_width=True)
 
 # ------------------------------------------------------------
@@ -507,15 +561,17 @@ if mode == "📊 Multi-Farm Overview":
 else:
     st.header("🌱 Farm-Level ESG Analysis")
 
-    farm_id = st.sidebar.selectbox("Select a farm", df["farm_id"].unique())
-    row = df[df["farm_id"] == farm_id].iloc[0]
-
-    st.subheader(
-        f"📍 {row['organisation_name']} — {row['crop']} ({row['country']} {int(row['year'])})"
+    # Support multiple crops per farm: select by record label
+    record_label = st.sidebar.selectbox(
+        "Select a farm & crop",
+        df["record_label"].unique(),
     )
+    row = df[df["record_label"] == record_label].iloc[0]
+
+    st.subheader(row["record_label"])
 
     # ---------- KPI CARDS ----------
-    st.markdown("### Key Performance Indicators")
+    st.markdown("### Key performance indicators")
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -553,7 +609,7 @@ else:
         )
 
     # ---------- ESG SCORECARDS ----------
-    st.markdown("### ESG Scores")
+    st.markdown("### ESG scores")
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -578,7 +634,7 @@ else:
         )
 
     # ---------- EMISSIONS DONUT ----------
-    st.markdown("### Emissions Breakdown")
+    st.markdown("### Emissions breakdown")
 
     emis_df = pd.DataFrame(
         {
@@ -607,7 +663,7 @@ else:
     st.altair_chart(donut, use_container_width=True)
 
     # ---------- PEER COMPARISON (ANONYMOUS) ----------
-    st.markdown("### Peer Comparison (Anonymous)")
+    st.markdown("### Peer comparison (anonymous)")
 
     if privacy_mode:
         st.warning(
@@ -616,7 +672,7 @@ else:
     else:
         comp_df = df[["farm_id", "yield_per_ha", "emissions_per_ha"]].copy()
         comp_df["Farm"] = comp_df["farm_id"].apply(
-            lambda x: "Selected farm" if x == farm_id else "Peer farm"
+            lambda x: "Selected farm" if x == row["farm_id"] else "Peer farm"
         )
 
         scatter = (
@@ -643,8 +699,8 @@ else:
 
         st.altair_chart(scatter, use_container_width=True)
 
-    # ---------- ESG NARRATIVE ----------
-    st.markdown("### ESG Narrative Report")
+    # ---------- ESG NARRATIVE + PDF DOWNLOAD ----------
+    st.markdown("### ESG narrative report")
 
     peer_avg = {
         "emissions": df["emissions_per_tonne"].mean(),
@@ -653,5 +709,19 @@ else:
         "acc": df["accidents_per_100_workers"].mean(),
     }
 
+    narrative = generate_esg_narrative(row, peer_avg)
+
     with st.expander("Open ESG narrative"):
-        st.markdown(generate_esg_narrative(row, peer_avg))
+        st.markdown(narrative)
+
+    # PDF download button
+    pdf_bytes = narrative_to_pdf_bytes(
+        title=f"ESG report — {row['organisation_name']} ({row['crop']} {int(row['year'])})",
+        narrative_md=narrative,
+    )
+    st.download_button(
+        label="📄 Download ESG report as PDF",
+        data=pdf_bytes,
+        file_name=f"ESG_report_{row['farm_id']}_{row['crop']}_{int(row['year'])}.pdf",
+        mime="application/pdf",
+    )
