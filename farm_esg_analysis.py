@@ -27,7 +27,7 @@ st.set_page_config(
 )
 
 # ------------------------------------------------------------
-# GLOBAL STYLING (Tenorite + dark shell + white panel + KPI cards)
+# GLOBAL STYLING (dark shell + white panel + KPI cards)
 # ------------------------------------------------------------
 st.markdown(
     """
@@ -35,9 +35,9 @@ st.markdown(
     :root {
         --agri-bg: #020617;
         --panel-bg: #ffffff;
-        --accent: #22c55e;
+        --accent: #16a34a;
         --accent-soft: #dcfce7;
-        --accent-strong: #16a34a;
+        --accent-strong: #15803d;
         --text-main: #0f172a;
         --text-muted: #6b7280;
         --border-soft: #e5e7eb;
@@ -76,21 +76,21 @@ st.markdown(
 
     /* KPI cards */
     .kpi-card {
-        padding: 1.0rem 1.15rem;
-        border-radius: 18px;
-        background: #ffffff;
-        border: 1px solid var(--border-soft);
-        box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+        padding: 1.1rem 1.3rem;
+        border-radius: 26px;
+        background: radial-gradient(circle at top left, #ffffff, #f9fafb 65%);
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.10);
     }
     .kpi-label {
         font-size: 0.78rem;
         text-transform: uppercase;
         color: var(--text-muted);
-        margin-bottom: 0.25rem;
-        letter-spacing: 0.12em;
+        margin-bottom: 0.35rem;
+        letter-spacing: 0.16em;
     }
     .kpi-value {
-        font-size: 1.45rem;
+        font-size: 1.55rem;
         font-weight: 700;
         color: var(--text-main);
     }
@@ -141,7 +141,7 @@ st.markdown(
         color: #111827 !important;
     }
     div[data-testid="stFileUploader"] button[kind="secondary"] {
-        background-color: #16a34a !important;
+        background-color: var(--accent) !important;
         color: #ffffff !important;
         border-radius: 999px !important;
         padding: 0.25rem 0.9rem !important;
@@ -163,7 +163,7 @@ st.markdown(
 )
 
 # ------------------------------------------------------------
-# ALTAIR LIGHT THEME (green-forward palette)
+# ALTAIR LIGHT THEME (uniform green palette)
 # ------------------------------------------------------------
 alt.themes.register(
     "agriesg_light",
@@ -183,9 +183,10 @@ alt.themes.register(
             },
             "legend": {"labelColor": "#374151", "titleColor": "#111827"},
             "range": {
-                # default category range – mostly greens + one accent
-                "category": ["#16a34a", "#22c55e", "#4ade80", "#65a30d",
-                             "#0f766e", "#22c55e", "#16a34a", "#4ade80"],
+                "category": [
+                    "#16a34a", "#22c55e", "#4ade80", "#bbf7d0",
+                    "#0f766e", "#22c55e", "#16a34a", "#4ade80",
+                ],
             },
         }
     },
@@ -751,6 +752,7 @@ else:
 
     st.markdown(f"#### {record_label}")
 
+    # ---------- KPI CARDS ----------
     st.markdown(
         "<div class='section-eyebrow'>Performance</div>"
         "<div class='section-title'>Key performance indicators</div>",
@@ -792,6 +794,129 @@ else:
             1,
         )
 
+    # ---------- KPI SNAPSHOT GRAPHS ----------
+    st.markdown(
+        "<div class='section-eyebrow'>Visuals</div>"
+        "<div class='section-title'>KPI snapshots</div>",
+        unsafe_allow_html=True,
+    )
+
+    # Production & environment KPIs — selected vs peer average
+    env_kpis = [
+        (
+            "Yield (t/ha)",
+            float(row["yield_per_ha"]),
+            float(df["yield_per_ha"].mean()),
+        ),
+        (
+            "Emissions per t\n(kg CO₂e/t)",
+            float(row["emissions_per_tonne"]),
+            float(df["emissions_per_tonne"].mean()),
+        ),
+        (
+            "Water per t\n(m³/t)",
+            float(row["water_per_tonne"]),
+            float(df["water_per_tonne"].mean()),
+        ),
+    ]
+
+    env_chart_df = pd.DataFrame(
+        [
+            {"KPI": name, "Value": value_sel, "Type": "Selected record"}
+            for name, value_sel, _ in env_kpis
+        ]
+        + [
+            {"KPI": name, "Value": value_peer, "Type": "Peer average"}
+            for name, _, value_peer in env_kpis
+        ]
+    )
+
+    env_chart = (
+        alt.Chart(env_chart_df)
+        .mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6)
+        .encode(
+            x=alt.X(
+                "KPI:N",
+                title="",
+                axis=alt.Axis(labelAngle=0, labelLine=False),
+            ),
+            xOffset="Type:N",
+            y=alt.Y("Value:Q", title=""),
+            color=alt.Color(
+                "Type:N",
+                title="",
+                scale=alt.Scale(range=["#16a34a", "#9ca3af"]),
+            ),
+            tooltip=[
+                "Type",
+                "KPI",
+                alt.Tooltip("Value:Q", format=".2f"),
+            ],
+        )
+        .properties(height=260)
+    )
+
+    # People & safety KPIs — selected vs peer average
+    female_pct = (
+        float(row["female_share"] * 100) if pd.notna(row["female_share"]) else np.nan
+    )
+    female_peer = float(df["female_share"].mean() * 100)
+
+    soc_kpis = [
+        ("Female workforce (%)", female_pct, female_peer),
+        ("Workers (count)", float(row["workers_total"]), float(df["workers_total"].mean())),
+        (
+            "Accident rate\n(/100 workers)",
+            float(row["accidents_per_100_workers"]),
+            float(df["accidents_per_100_workers"].mean()),
+        ),
+    ]
+
+    soc_chart_df = pd.DataFrame(
+        [
+            {"KPI": name, "Value": value_sel, "Type": "Selected record"}
+            for name, value_sel, _ in soc_kpis
+        ]
+        + [
+            {"KPI": name, "Value": value_peer, "Type": "Peer average"}
+            for name, _, value_peer in soc_kpis
+        ]
+    )
+
+    soc_chart = (
+        alt.Chart(soc_chart_df)
+        .mark_bar(cornerRadiusTopLeft=6, cornerRadiusTopRight=6)
+        .encode(
+            x=alt.X(
+                "KPI:N",
+                title="",
+                axis=alt.Axis(labelAngle=0, labelLine=False),
+            ),
+            xOffset="Type:N",
+            y=alt.Y("Value:Q", title=""),
+            color=alt.Color(
+                "Type:N",
+                title="",
+                scale=alt.Scale(range=["#16a34a", "#9ca3af"]),
+            ),
+            tooltip=[
+                "Type",
+                "KPI",
+                alt.Tooltip("Value:Q", format=".2f"),
+            ],
+        )
+        .properties(height=260)
+    )
+
+    c_env, c_soc = st.columns(2)
+    with c_env:
+        st.markdown("**Production & environment**")
+        st.altair_chart(env_chart, use_container_width=True)
+    with c_soc:
+        st.markdown("**People & safety**")
+        st.altair_chart(soc_chart, use_container_width=True)
+
+    # ---------- ESG SCORES ----------
     st.markdown(
         "<div class='section-eyebrow'>Scores</div>"
         "<div class='section-title'>ESG scores</div>",
@@ -820,6 +945,7 @@ else:
             unsafe_allow_html=True,
         )
 
+    # ---------- EMISSIONS BREAKDOWN ----------
     st.markdown(
         "<div class='section-eyebrow'>Emissions</div>"
         "<div class='section-title'>Emissions breakdown</div>",
@@ -858,6 +984,7 @@ else:
     )
     st.altair_chart(donut, use_container_width=True)
 
+    # ---------- PEER COMPARISON ----------
     st.markdown(
         "<div class='section-eyebrow'>Benchmark</div>"
         "<div class='section-title'>Peer comparison (anonymous)</div>",
@@ -902,6 +1029,7 @@ else:
 
         st.altair_chart(scatter, use_container_width=True)
 
+    # ---------- ESG NARRATIVE ----------
     st.markdown(
         "<div class='section-eyebrow'>Narrative</div>"
         "<div class='section-title'>ESG narrative report</div>",
