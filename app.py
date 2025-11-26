@@ -3,6 +3,8 @@ import pandas as pd
 import time
 from dotenv import load_dotenv
 
+from utils.logging_interface import render_logging_interface
+
 from utils.calculations import (
     compute_kpis, 
     aggregate_to_farm_level,
@@ -64,15 +66,6 @@ def load_css():
         color: var(--color-brown-medium);
         text-align: center;
         margin-bottom: 30px;
-    }
-    
-    .section-title {
-        font-size: 26px;
-        font-weight: 600;
-        color: var(--color-green-dark);
-        margin: 25px 0 15px 0;
-        padding-left: 10px;
-        border-left: 5px solid var(--color-green-medium);
     }
     
     .hero-section {
@@ -294,8 +287,55 @@ def load_css():
     
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
+
+    /* === MOBILE OPTIMIZATIONS === */
+    @media (max-width: 768px) {
+        /* Shrink the big title */
+        .main-title {
+            font-size: 32px !important;
+        }
+        
+        .subtitle {
+            font-size: 16px !important;
+        }
+
+        /* Adjust Hero Section */
+        .hero-section {
+            padding: 20px !important;
+        }
+        
+        .score-message {
+            font-size: 18px !important;
+        }
+
+        /* METRIC CARDS: Allow them to be shorter on mobile to save scroll space */
+        .metric-card {
+            height: auto !important;
+            min-height: 160px !important;
+            padding: 15px !important;
+            margin: 5px 0 !important;
+        }
+        
+        .metric-icon {
+            font-size: 40px !important;
+        }
+        
+        .metric-value {
+            font-size: 28px !important;
+        }
+        
+        /* Reduce padding on the detailed cards */
+        .esg-component-card {
+            padding: 10px !important;
+        }
+        
+        /* Fix Chart Margins */
+        div[data-testid="stPlotlyChart"] {
+            width: 100% !important;
+        }
+    }
     </style>
-    """, unsafe_allow_html=True)
+    """, unsafe_allow_html=True) 
 
 load_css()
 
@@ -626,9 +666,7 @@ gauge_fig = create_gauge_chart(
 gauge_fig.update_layout(
     paper_bgcolor='rgba(0,0,0,0)',
     plot_bgcolor='rgba(0,0,0,0)',
-    # 1. FIX LABELS: Increased margins (l/r/b) so 0 and 100 are not cut off
-    margin=dict(l=50, r=50, t=50, b=50),
-    width=600, 
+    margin=dict(l=40, r=40, t=40, b=40), 
     height=300
 )
 
@@ -637,7 +675,7 @@ col_left, col_center, col_right = st.columns([1, 2, 1])
 with col_center:
     st.plotly_chart(
         gauge_fig, 
-        use_container_width=True, # This allows it to fill the center column nicely
+        use_container_width=True, 
         config={'displayModeBar': False}
     )
 
@@ -654,7 +692,7 @@ else:
     message = "💪 Let's improve your farming practices together."
     color = "#c62828"
 
-# We apply the hero-section style just to the text message now
+# Apply the hero-section style just to the text message now
 st.markdown(f'''
 <div class="hero-section">
     <p class="score-message" style="color: {color}; margin: 0;">{message}</p>
@@ -779,21 +817,15 @@ st.markdown("---")
 # === AI INSIGHTS ===
 st.markdown('<h2 class="section-title">💡 What You Can Do This Season</h2>', unsafe_allow_html=True)
 
-# ---------------- START OF FIX ----------------
-# 1. Try to get name from the aggregated row
 farmer_name = my_farm.get('farmer_name', None)
 
-# 2. If missing (lost during aggregation), look it up in the raw dataframe
 if not farmer_name or pd.isna(farmer_name):
-    # Filter the original dataframe for this specific farm
-    # We look at the 'df' variable which exists before aggregation
     name_lookup = df[df['farm_id'] == selected_farm]['farmer_name'].dropna().unique()
     
     if len(name_lookup) > 0:
         farmer_name = str(name_lookup[0])
     else:
-        farmer_name = "Farmer" # Fallback if absolutely no name found
-# ---------------- END OF FIX ----------------
+        farmer_name = "Farmer" 
 
 with st.spinner(f"🤖 Generating advice for {farmer_name}..."):
     insights = generate_ai_insights(
@@ -806,7 +838,7 @@ with st.spinner(f"🤖 Generating advice for {farmer_name}..."):
         female_share=0,
         accidents=0,
         farm_id=selected_farm,
-        farmer_name=farmer_name # Pass the retrieved name here
+        farmer_name=farmer_name 
     )
 
 insights_html = '<div class="insights-container">'
@@ -821,7 +853,8 @@ st.markdown("---")
 # === CHARTS ===
 st.markdown('<h2 class="section-title">📈 Visual Breakdown</h2>', unsafe_allow_html=True)
 
-tab1, tab2, tab3 = st.tabs(["📊 Score Breakdown", "🌍 Emissions Sources", "📅 Progress Over Time"])
+# UPDATE THIS LINE
+tab1, tab2, tab3, tab4 = st.tabs(["📊 Score Breakdown", "🌍 Emissions Sources", "📅 Progress Over Time", "📝 Activity Log"])
 
 with tab1:
     col1, col2 = st.columns(2)
@@ -833,13 +866,13 @@ with tab1:
             s_score=my_farm['s_score'],
             g_score=my_farm['g_score']
         )
-        st.plotly_chart(pie_fig, width='stretch', config={'displayModeBar': False})
+        st.plotly_chart(pie_fig, use_container_width=True, config={'displayModeBar': False})
     
     with col2:
         st.markdown("### Farm Performance Comparison")
         all_farms = esg_df[esg_df['year'] == current_year]
         comparison_fig = create_comparison_bar(my_farm, all_farms)
-        st.plotly_chart(comparison_fig, width='stretch', config={'displayModeBar': False})
+        st.plotly_chart(comparison_fig, use_container_width=True, config={'displayModeBar': False})
 
 with tab2:
     col1, col2 = st.columns([2, 1])
@@ -851,7 +884,7 @@ with tab2:
             diesel=my_farm['emissions_diesel'],
             electricity=0
         )
-        st.plotly_chart(donut_fig, width='stretch', config={'displayModeBar': False})
+        st.plotly_chart(donut_fig, use_container_width=True, config={'displayModeBar': False})
     
     with col2:
         st.markdown("### Key Numbers")
@@ -878,6 +911,9 @@ with tab3:
             st.info("Need at least 2 years of data to show progress.")
     else:
         st.info("📊 Switch to 'Multi-Year Progress' mode to see trends!")
+
+with tab4:
+    render_logging_interface()
 
 st.markdown("---")
 
@@ -909,7 +945,7 @@ with col1:
             # Generate PDF
             pdf_buffer = generate_pdf_report(
                 farm_data=my_farm,
-                farmer_name=my_farm.get('farmer_name', 'Valued Farmer'),
+                farmer_name=farmer_name,
                 year=current_year,
                 insights_list=insights,
                 gauge_fig=gauge_fig,

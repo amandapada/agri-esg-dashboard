@@ -85,18 +85,13 @@ Give me my personal advice list.""")
         # Parse response into list
         content = response.content.strip()
         
-        # Split by newlines
         insights = []
         for line in content.split('\n'):
             line = line.strip()
-            # Remove bullet points but keep text
             clean_line = line.lstrip('•-*123456789. ')
             
-            # --- THE FIX IS HERE ---
-            # Check if line is a greeting
             is_greeting = clean_line.lower().startswith(('hello', 'hi ', 'dear', 'greetings'))
             
-            # Keep if it is a greeting OR if it is long enough (lowered to 10 chars)
             if clean_line and (len(clean_line) > 10 or is_greeting):
                 insights.append(clean_line)
         

@@ -65,7 +65,7 @@ def generate_pdf_report(farm_data, farmer_name, year, insights_list, gauge_fig, 
     )
     
     # === HEADER ===
-    elements.append(Paragraph(f"🌾 AgriESG Farm Report", title_style))
+    elements.append(Paragraph(f"🌾 SFI & Scope 3 ESG Report", title_style))
     elements.append(Spacer(1, 0.2*inch))
     elements.append(Paragraph(f"<b>Farm:</b> {farm_data['farm_name']}", normal_style))
     elements.append(Paragraph(f"<b>Farmer:</b> {farmer_name}", normal_style))
