@@ -14,52 +14,52 @@ def generate_ai_insights(
     female_share: float,
     accidents: float,
     farm_id: str,
-    farmer_name: str = None
+    farmer_name: str = None 
 ) -> list[str]:
     """
     Generate AI-powered, farmer-friendly insights using Gemini.
-    Returns list of 3-4 actionable recommendations.
+    Note: 'farmer_name' argument now receives the Farm Name from app.py.
     """
     
     # Check if API key exists
     api_key = os.getenv("GOOGLE_API_KEY")
+    # Clean up the name (if it's just 'Farm', treat as generic)
+    greeting_name = str(farmer_name) if farmer_name and str(farmer_name).lower() != 'nan' else "Farm Team"
+    
     if not api_key:
-        greeting = f"Hello {farmer_name}!" if farmer_name else "Hello!"
         return [
-            f"{greeting} Set up your Google API key to get personalized advice.",
+            f"Hello {greeting_name}! Set up your Google API key to get personalized advice.",
             "Check your .env file for GOOGLE_API_KEY configuration."
         ]
     
-    # Get greeting name (Default to 'Friend' if None)
-    greeting_name = farmer_name if farmer_name and str(farmer_name).lower() != 'nan' else "Friend"
-    
     # Create prompt template
+    # We explicitly tell the AI to use the Farm Name in the greeting
     prompt = ChatPromptTemplate.from_messages([
-        ("system", f"""You are a helpful farming advisor speaking to a farmer named {greeting_name}.
+        ("system", f"""You are a helpful farming advisor speaking to the team at {greeting_name}.
 
 Rules:
-- ALWAYS start your response with a standalone greeting line: "Hello {greeting_name}!"
-- Then provide 3-4 simple, actionable tips
-- Use SIMPLE words (like you're talking to a 12-year-old)
-- NO technical jargon
-- Use actual numbers from their farm data where possible
-- Address them as "you"
+- ALWAYS start your response with exactly: "Hello {greeting_name}!"
+- Then provide 3-4 simple, actionable tips to improve their sustainability.
+- Use SIMPLE words (plain English).
+- NO technical jargon (say "soil health" instead of "agronomic substrate analysis").
+- Focus on practical wins: saving money on fertilizer, improving soil, or safety.
+- If their score is low, be encouraging. If high, say "Keep it up!".
 
 Example Output Format:
 Hello {greeting_name}!
-Try using 10 bags less fertilizer next month to save money.
-Consider hiring 2 more women for the harvest season.
-Great safety record! Keep it up.
+Try using less fertilizer on the North Field to save costs.
+Planting cover crops this winter could help your soil health.
+Your safety record is great—keep checking those machinery logs.
 """),
         
-        ("user", """Farm Data:
-- Overall Score: {esg_score}/100
+        ("user", f"""Farm Data:
+- Overall Sustainability Score: {esg_score}/100
 - Environment Score: {e_score}/100 
 - Social Score: {s_score}/100
-- Pollution: {emissions} kg/ha
-- Accidents: {accidents}
+- Emissions: {emissions_per_ha} kg/ha (Lower is better)
+- Yield Estimate: {yield_per_ha:.1f} tons/ha
 
-Give me my personal advice list.""")
+Give me a simple list of advice.""")
     ])
     
     try:
@@ -74,13 +74,7 @@ Give me my personal advice list.""")
         chain = prompt | llm
         
         # Invoke
-        response = chain.invoke({
-            "esg_score": round(esg_score, 0),
-            "e_score": round(e_score, 0),
-            "s_score": round(s_score, 0),
-            "emissions": round(emissions_per_ha, 1),
-            "accidents": round(accidents, 1)
-        })
+        response = chain.invoke({})
         
         # Parse response into list
         content = response.content.strip()
@@ -88,8 +82,10 @@ Give me my personal advice list.""")
         insights = []
         for line in content.split('\n'):
             line = line.strip()
+            # Remove bullet points or numbering
             clean_line = line.lstrip('•-*123456789. ')
             
+            # Check if it's the greeting or a substantial tip
             is_greeting = clean_line.lower().startswith(('hello', 'hi ', 'dear', 'greetings'))
             
             if clean_line and (len(clean_line) > 10 or is_greeting):

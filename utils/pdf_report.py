@@ -65,29 +65,36 @@ def generate_pdf_report(farm_data, farmer_name, year, insights_list, gauge_fig, 
     )
     
     # === HEADER ===
-    elements.append(Paragraph(f"🌾 SFI & Scope 3 ESG Report", title_style))
+    elements.append(Paragraph(f"🌾 Farm Sustainability Report", title_style))
     elements.append(Spacer(1, 0.2*inch))
-    elements.append(Paragraph(f"<b>Farm:</b> {farm_data['farm_name']}", normal_style))
-    elements.append(Paragraph(f"<b>Farmer:</b> {farmer_name}", normal_style))
+    
+    # Use .get() to avoid crashing if optional data is missing
+    farm_name_val = farm_data.get('farm_name', 'Unknown Farm')
+    
+    elements.append(Paragraph(f"<b>Farm Name:</b> {farm_name_val}", normal_style))
+    # Changed label to "Report For" since we are passing the Farm Name/Greeting here
+    elements.append(Paragraph(f"<b>Report For:</b> {farmer_name}", normal_style))
     elements.append(Paragraph(f"<b>Year:</b> {year}", normal_style))
-    elements.append(Paragraph(f"<b>Report Generated:</b> {datetime.now().strftime('%d %B %Y')}", normal_style))
+    elements.append(Paragraph(f"<b>Generated:</b> {datetime.now().strftime('%d %B %Y')}", normal_style))
     elements.append(Spacer(1, 0.3*inch))
     
     # === OVERALL SCORE SECTION ===
     elements.append(Paragraph("Your Farm's ESG Score", heading_style))
     
-    esg_score = farm_data['esg_score']
+    esg_score = farm_data.get('esg_score', 0)
+    
+    # Updated text to plain English logic
     if esg_score >= 70:
-        message = "Excellent! You're a leader in sustainable farming."
+        message = "Healthy Profile! You're leading the way."
         color = "#2d5016"
     elif esg_score >= 50:
-        message = "Good work! A few improvements will boost your score."
+        message = "On Track! A few improvements will help."
         color = "#f9a825"
     else:
-        message = "There's room for improvement in your farming practices."
+        message = "Needs Work. Let's improve your practices."
         color = "#c62828"
     
-    elements.append(Paragraph(f"<b>Overall ESG Score: {esg_score:.0f}/100</b>", 
+    elements.append(Paragraph(f"<b>Overall Score: {esg_score:.0f}/100</b>", 
                              ParagraphStyle('ScoreStyle', parent=normal_style, fontSize=14, 
                                           textColor=colors.HexColor(color))))
     elements.append(Paragraph(message, normal_style))
@@ -106,17 +113,23 @@ def generate_pdf_report(farm_data, farmer_name, year, insights_list, gauge_fig, 
     elements.append(Spacer(1, 0.3*inch))
     
     # === ESG COMPONENTS ===
-    elements.append(Paragraph("ESG Components Breakdown", heading_style))
+    elements.append(Paragraph("Score Breakdown", heading_style))
     
-    e_score = farm_data['e_score']
-    s_score = farm_data['s_score']
-    g_score = farm_data['g_score']
+    e_score = farm_data.get('e_score', 0)
+    s_score = farm_data.get('s_score', 0)
+    g_score = farm_data.get('g_score', 0)
     
+    # Plain English assessments
+    def get_assessment(score):
+        if score >= 70: return 'Healthy'
+        if score >= 50: return 'On Track'
+        return 'Needs Work'
+
     score_data = [
-        ['Component', 'Score', 'Assessment'],
-        ['Environment (50%)', f"{e_score:.0f}/100", 'Excellent' if e_score >= 70 else 'Good' if e_score >= 50 else 'Needs Work'],
-        ['Social (30%)', f"{s_score:.0f}/100", 'Excellent' if s_score >= 70 else 'Good' if s_score >= 50 else 'Needs Work'],
-        ['Governance (20%)', f"{g_score:.0f}/100", 'Excellent' if g_score >= 70 else 'Good' if g_score >= 50 else 'Needs Work'],
+        ['Component', 'Score', 'Status'],
+        ['Environment (50%)', f"{e_score:.0f}/100", get_assessment(e_score)],
+        ['Social (30%)', f"{s_score:.0f}/100", get_assessment(s_score)],
+        ['Governance (20%)', f"{g_score:.0f}/100", get_assessment(g_score)],
     ]
     
     score_table = Table(score_data, colWidths=[2.5*inch, 1.5*inch, 1.5*inch])
@@ -147,14 +160,41 @@ def generate_pdf_report(farm_data, farmer_name, year, insights_list, gauge_fig, 
     elements.append(PageBreak())
     
     # === KEY METRICS ===
-    elements.append(Paragraph("Key Sustainability Metrics", heading_style))
+    elements.append(Paragraph("Quick Stats", heading_style))
     
+    # Safe extraction of optional metrics
+    area = farm_data.get('total_farm_area_ha', 0)
+    emissions = farm_data.get('emissions_per_ha', 0)
+    nitrogen = farm_data.get('n_per_ha', 0)
+    
+    # Calculate SFI average safely
+    sfi_score = 0
+    sfi_count = 0
+    if 'sfi_soil_compliance_rate' in farm_data: 
+        sfi_score += farm_data['sfi_soil_compliance_rate']
+        sfi_count += 1
+    if 'sfi_nutrient_compliance_rate' in farm_data: 
+        sfi_score += farm_data['sfi_nutrient_compliance_rate']
+        sfi_count += 1
+    if 'sfi_hedgerow_compliance_rate' in farm_data: 
+        sfi_score += farm_data['sfi_hedgerow_compliance_rate']
+        sfi_count += 1
+        
+    sfi_final = (sfi_score / max(sfi_count, 1)) * 100 if sfi_count > 0 else 0
+
+    # New Logic: Healthy / Low / Needs work / On track
     metrics_data = [
         ['Metric', 'Value', 'Status'],
-        ['Total Farm Area', f"{farm_data['total_farm_area_ha']:.1f} ha", '✓ Tracked'],
-        ['Emissions Intensity', f"{farm_data['emissions_per_ha']:.0f} kg/ha", 'Excellent' if farm_data['emissions_per_ha'] < 30 else 'Good' if farm_data['emissions_per_ha'] < 50 else 'Needs Work'],
-        ['Nitrogen Use', f"{farm_data['n_per_ha']:.0f} kg/ha", 'Excellent' if farm_data['n_per_ha'] < 50 else 'Good' if farm_data['n_per_ha'] < 100 else 'Needs Work'],
-        ['SFI Compliance', f"{((farm_data['sfi_soil_compliance_rate'] + farm_data['sfi_nutrient_compliance_rate'] + farm_data['sfi_hedgerow_compliance_rate']) / 3 * 100):.0f}%", '✓ Compliant'],
+        ['Total Farm Area', f"{area:.1f} ha", '✓ On Track'],
+        
+        # Emissions (Lower is better)
+        ['Emissions', f"{emissions:.0f} kg/ha", 'Low' if emissions < 30 else 'Okay' if emissions < 50 else 'High'],
+        
+        # Nitrogen (Lower is better)
+        ['Nitrogen Use', f"{nitrogen:.0f} kg/ha", 'Low' if nitrogen < 50 else 'Okay' if nitrogen < 100 else 'High'],
+        
+        # Compliance
+        ['Compliance', f"{sfi_final:.0f}%", 'Healthy' if sfi_final > 80 else 'On Track'],
     ]
     
     metrics_table = Table(metrics_data, colWidths=[2.5*inch, 1.5*inch, 1.5*inch])
@@ -180,20 +220,26 @@ def generate_pdf_report(farm_data, farmer_name, year, insights_list, gauge_fig, 
         donut_img = Image(donut_img_buffer, width=3.5*inch, height=2.8*inch)
         elements.append(donut_img)
     except:
-        elements.append(Paragraph("(Donut chart unavailable)", normal_style))
+        pass
     
     elements.append(PageBreak())
     
     # === RECOMMENDATIONS ===
     elements.append(Paragraph("What You Can Do This Season", heading_style))
     
-    for i, insight in enumerate(insights_list, 1):
+    # Filter out the "Hello X" greeting from the insights list so it doesn't look weird in a list
+    clean_insights = [i for i in insights_list if not i.lower().startswith(('hello', 'hi ', 'dear'))]
+    
+    if not clean_insights:
+        clean_insights = insights_list # Fallback if filtering removes everything
+
+    for i, insight in enumerate(clean_insights, 1):
         elements.append(Paragraph(f"<b>{i}.</b> {insight}", normal_style))
     
     elements.append(Spacer(1, 0.3*inch))
     
     # === COMPARISON ===
-    elements.append(Paragraph("Your Farm vs. Other Farms", heading_style))
+    elements.append(Paragraph("Your Farm vs. Others", heading_style))
     
     try:
         bar_img_buffer = BytesIO()
@@ -215,11 +261,11 @@ def generate_pdf_report(farm_data, farmer_name, year, insights_list, gauge_fig, 
             line_img = Image(line_img_buffer, width=5*inch, height=3.33*inch)
             elements.append(line_img)
         except:
-            elements.append(Paragraph("(Progress chart unavailable)", normal_style))
+            pass
     
     elements.append(Spacer(1, 0.5*inch))
     elements.append(Paragraph(
-        "<i>This report was generated by the AgriESG Dashboard. For more information, visit your dashboard to explore your farm's data in detail.</i>",
+        "<i>This report was generated by the AgriESG Dashboard.</i>",
         ParagraphStyle('Footer', parent=normal_style, fontSize=9, textColor=colors.grey)
     ))
     
