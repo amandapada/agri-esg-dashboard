@@ -270,7 +270,6 @@ def create_comparison_bar(my_farm: dict, all_farms_df) -> go.Figure:
             title="",
             tickfont=dict(color='#5d4037')
         ),
-        paper_bgcolor="white",
         plot_bgcolor="white",
         font=dict(family="Inter", size=13, color='#5d4037'),
         height=350,
@@ -284,7 +283,6 @@ def create_comparison_bar(my_farm: dict, all_farms_df) -> go.Figure:
             font=dict(color='#5d4037')
         )
     )
-    
     fig.update_xaxes(showgrid=False, showline=True, linewidth=2, linecolor='#e0e0e0')
     fig.update_yaxes(showgrid=True, gridwidth=1, gridcolor='#e0e0e0')
     
