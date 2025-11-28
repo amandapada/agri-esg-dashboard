@@ -27,7 +27,7 @@ load_dotenv()
 # Page config
 st.set_page_config(
     page_title="AgriESG Dashboard",
-    page_icon="🌾",
+    page_icon="assets/agriesg_icon.png",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -292,18 +292,18 @@ def get_status_info(value, thresholds, lower_is_better=False):
     """Return plain English status text, CSS class, and emoji"""
     if lower_is_better:
         if value <= thresholds['excellent']:
-            return "Low", "status-low", "✅", 90
+            return "Low", "status-low", "🟢", 90
         elif value <= thresholds['good']:
-            return "Okay", "status-on-track", "⚠️", 65
+            return "Okay", "status-on-track", "✔️", 65
         else:
-            return "High", "status-needs-work", "❌", 35
+            return "High", "status-needs-work", "🔴", 35
     else:
         if value >= thresholds['excellent']:
-            return "Healthy", "status-healthy", "✅", 90
+            return "Healthy", "status-healthy", "🟢", 90
         elif value >= thresholds['good']:
             return "Okay", "status-on-track", "⚠️", 65
         else:
-            return "Needs Work", "status-needs-work", "❌", 35
+            return "Needs Work", "status-needs-work", "🔴", 35
 
 @st.cache_data(ttl=1800)
 def load_and_process_data(file_bytes):
@@ -374,6 +374,28 @@ if uploaded_file is None:
         """)
     
     st.markdown("---")
+    
+    st.expander("**View Optional/Recommended Data Fields**").markdown("""
+    Providing these fields improves the accuracy of your scores and unlocks more detailed insights:
+                                                                      
+    Recommended 
+    * Farm ID
+    * Field ID
+    * Phosphate Fertiliser (kg)
+    * Potash Fertiliser (kg)
+    * Soil Type
+    * Labour Hours
+    * Yield (tons)
+    * Selling Price (£/ton)
+                                                                      
+    Optional advanced 
+    * Cover Crop (Yes/No)
+    * Reduced Tillage (Yes/No)
+    * Trees Planted
+    * Soil Test Conducted (Yes/No)
+    * Notes
+    """)
+    
     st.markdown("### 📥 Download CSV Template")
     
     # Create template matching new requirements
@@ -528,13 +550,13 @@ with col_center:
 
 score = my_farm['esg_score']
 if score >= 70:
-    message = "🎉 Healthy Profile! You're leading the way."
+    message = "🟢 Healthy Profile! You're leading the way."
     color = "#2d5016"
 elif score >= 50:
-    message = "👍 On Track! A few improvements will help."
+    message = "✔️ On Track! A few improvements will help."
     color = "#c9800b"
 else:
-    message = "💪 Needs Work. Let's improve your practices."
+    message = "🔴 Needs Work. Let's improve your practices."
     color = "#c62828"
 
 st.markdown(f'''
@@ -561,7 +583,7 @@ with col1:
         <div class="metric-icon">🌾</div>
         <div class="metric-title">Total Farm Area</div>
         <div class="metric-value">{total_area:.1f} ha</div>
-        <div class="metric-status status-on-track">✅ On track</div>
+        <div class="metric-status status-on-track">✔️ On track</div>
     </div>
     ''', unsafe_allow_html=True)
 
