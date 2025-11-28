@@ -150,7 +150,7 @@ def create_score_breakdown_pie(e_score: float, s_score: float, g_score: float) -
             y=-0.15,
             xanchor="center",
             x=0.5,
-            font=dict(size=14, family='Inter')
+            font=dict(size=14, family='Inter', color='#5d4037'),
         ),
         paper_bgcolor="white",
         font=dict(family="Inter"),
@@ -196,7 +196,7 @@ def create_emissions_donut(fertilizer: float, diesel: float, electricity: float)
             y=0.5,
             xanchor="left",
             x=1.05,
-            font=dict(size=13, family='Inter')
+            font=dict(size=13, family='Inter', color='#5d4037')
         ),
         paper_bgcolor="white",
         font=dict(family="Inter"),
@@ -207,7 +207,7 @@ def create_emissions_donut(fertilizer: float, diesel: float, electricity: float)
     return fig
 
 def create_comparison_bar(my_farm: dict, all_farms_df) -> go.Figure:
-    """Bar chart with plain English tooltip"""
+    """Bar chart with plain English tooltip and fixed text colors for Dark Mode"""
     
     if len(all_farms_df) < 2:
         avg_esg, avg_e, avg_s, avg_g = 60.0, 55.0, 50.0, 65.0
@@ -234,7 +234,7 @@ def create_comparison_bar(my_farm: dict, all_farms_df) -> go.Figure:
         marker_color='#4a7c29',
         text=[f"{s:.0f}" for s in my_scores],
         textposition='outside',
-        textfont=dict(size=14, weight=700),
+        textfont=dict(size=14, weight=700, color='#5d4037'), 
         hovertemplate=(
             '<b>Your Farm</b><br>%{x}: %{y:.1f}/100<br>' +
             '<i>What this means: Your specific performance.</i><extra></extra>'
@@ -249,7 +249,7 @@ def create_comparison_bar(my_farm: dict, all_farms_df) -> go.Figure:
         marker_color='#a1887f',
         text=[f"{s:.0f}" for s in avg_scores],
         textposition='outside',
-        textfont=dict(size=14, weight=700),
+        textfont=dict(size=14, weight=700, color='#5d4037'),
         hovertemplate=(
             f'<b>{comparison_label}</b><br>%{{x}}: %{{y:.1f}}/100<br>' +
             f'<i>What this means: {desc}</i><extra></extra>'
@@ -259,14 +259,30 @@ def create_comparison_bar(my_farm: dict, all_farms_df) -> go.Figure:
     
     fig.update_layout(
         barmode='group',
-        yaxis=dict(range=[0, 115], title="Score", gridcolor='#e0e0e0'),
-        xaxis=dict(title=""),
+        yaxis=dict(
+            range=[0, 115], 
+            # FIXED: Use nested dictionary for title font
+            title=dict(text="Score", font=dict(color='#5d4037')),
+            gridcolor='#e0e0e0',
+            tickfont=dict(color='#5d4037')
+        ),
+        xaxis=dict(
+            title="",
+            tickfont=dict(color='#5d4037')
+        ),
         paper_bgcolor="white",
         plot_bgcolor="white",
         font=dict(family="Inter", size=13, color='#5d4037'),
         height=350,
         margin=dict(l=50, r=30, t=50, b=50),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        legend=dict(
+            orientation="h",
+            yanchor="bottom",
+            y=1.02,
+            xanchor="right",
+            x=1,
+            font=dict(color='#5d4037')
+        )
     )
     
     fig.update_xaxes(showgrid=False, showline=True, linewidth=2, linecolor='#e0e0e0')
