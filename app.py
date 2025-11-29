@@ -347,7 +347,7 @@ with st.sidebar:
             st.error("❌ Please upload a CSV file (not Excel/PDF).")
             st.stop()
         
-        st.success("✅ File uploaded!"
+        st.success("✅ File uploaded!")
     
     st.markdown("---")
 
