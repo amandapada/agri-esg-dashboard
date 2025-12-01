@@ -338,15 +338,9 @@ def get_base64_image(image_path):
 # Sidebar
 with st.sidebar:
     st.header("📁 Upload Data")
-    # REMOVE type='csv' to fix the Samsung/Android bug
-    uploaded_file = st.file_uploader("📂 Upload your Farm Data")
-
-    # Manual check: If a file is uploaded, check if it ends with .csv
+    uploaded_file = st.file_uploader("Upload your CSV file", type="csv")
+    
     if uploaded_file is not None:
-        if not uploaded_file.name.lower().endswith('.csv'):
-            st.error("❌ Please upload a CSV file (not Excel/PDF).")
-            st.stop()
-        
         st.success("✅ File uploaded!")
     
     st.markdown("---")
